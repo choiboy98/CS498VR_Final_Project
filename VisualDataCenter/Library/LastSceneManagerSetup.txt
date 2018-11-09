@@ -1,0 +1,4 @@
+sceneSetups:
+- path: U:/CS498MP4/Assets/StartScene.unity
+  isLoaded: 1
+  isActive: 1
