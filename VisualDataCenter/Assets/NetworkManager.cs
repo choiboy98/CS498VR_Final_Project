@@ -12,7 +12,7 @@ public class NetworkManager : MonoBehaviour {
 
     void CreateRouter()
     {
-        GameObject router = Instantiate(routerPrefab, transform.position, Quaternion.identity);
+        GameObject router = Instantiate(routerPrefab, transform.position + transform.forward, Quaternion.identity);
     }
 	
 	// Update is called once per frame
