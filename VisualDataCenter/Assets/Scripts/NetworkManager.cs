@@ -121,14 +121,39 @@ public class GNS3Handle
 public class GNS3ProjectHandle
 {
     private List<Node> nodes;
+    private List<Link> links;
     private readonly string url;
     private readonly GNS3Handle handle;
 
     public GNS3ProjectHandle(GNS3Handle handle_, string project_id)
     {
         nodes = new List<Node>();
+        links = new List<Link>();
         handle = handle_;
         url = handle.url + "projects/" + project_id;
+    }
+
+    [System.Serializable]
+    public class Links
+    {
+        public List<Link> links;
+
+        public static Links CreateFromJSON(string json)
+        {
+            return JsonUtility.FromJson<Links>(json);
+        }
+    }
+
+    [System.Serializable]
+    public class Link
+    {
+        public string link_id;
+        public List<Node> nodes;
+
+        public static Link CreateFromJSON(string json)
+        {
+            return JsonUtility.FromJson<Link>(json);
+        }
     }
 
     [System.Serializable]
@@ -316,18 +341,24 @@ public class GNS3ProjectHandle
         if (request.isNetworkError || request.isHttpError)
         {
             Debug.Log(request.downloadHandler.text);
+            yield break;
         }
-        else
-        {
-            // TODO
-            // GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
-            Debug.Log(request.downloadHandler.text);
-        }
+
+        // TODO instantiate some kind of link object
+        // GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
+        Link link = Link.CreateFromJSON(request.downloadHandler.text);
+        links.Add(link);
+        Debug.Log("Successfully created link with id " + link.link_id + " connecting nodes " + link.nodes[0].node_id + " and " + link.nodes[1].node_id);
     }
 
     public List<Node> GetNodes()
     {
         return nodes;
+    }
+
+    public List<Link> GetLinks()
+    {
+        return links;
     }
 }
 
@@ -397,7 +428,7 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.N))
         {
-            StartCoroutine(projectHandle.CreateLink("9fc570aa-9a9a-4b95-a7f1-52e6677ba3a3", "07dd02b2-6890-402d-b4f2-0791251a8f98", 0, 0));
+            StartCoroutine(projectHandle.CreateLink("0453abfb-900b-44cb-811c-ea77e79fda6c", "5b2ca014-913b-4a72-b6bc-23588cd34c48", 0, 0));
         }
     }
 }
