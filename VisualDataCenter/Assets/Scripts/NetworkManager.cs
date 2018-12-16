@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 
 public class GNS3Handle
 {
-    private string url;
+    private readonly string url;
 
     public GNS3Handle(string ip, int port)
     {
@@ -27,6 +27,25 @@ public class GNS3Handle
     }
 
     [System.Serializable]
+    public class Appliances
+    {
+        public List<Appliance> appliances;
+
+        public static Appliances CreateFromJSON(string json)
+        {
+            return JsonUtility.FromJson<Appliances>(json);
+        }
+    }
+
+    [System.Serializable]
+    public class Appliance
+    {
+        public string appliance_id;
+        public string category;
+        public string name;
+    }
+
+    [System.Serializable]
     public class Projects
     {
         public List<Project> projects;
@@ -42,11 +61,6 @@ public class GNS3Handle
     {
         public string name;
         public string project_id;
-
-        public static Project CreateFromJSON(string json)
-        {
-            return JsonUtility.FromJson<Project>(json);
-        }
     }
 
     public IEnumerator ListProjects(Action<Projects> onSuccess, Action onFailure)
@@ -61,6 +75,20 @@ public class GNS3Handle
         // :(
         var projects = JsonUtility.FromJson<Projects>("{\"projects\":"+request.downloadHandler.text+"}");
         onSuccess(projects);
+    }
+
+    public IEnumerator ListAppliances(Action<Appliances> onSuccess, Action onFailure)
+    {
+        var request = new UnityWebRequest(url + "appliances", "GET");
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            onFailure();
+        }
+        // :(
+        var appliances = JsonUtility.FromJson<Appliances>("{\"appliances\":" + request.downloadHandler.text + "}");
+        onSuccess(appliances);
     }
 }
 
@@ -151,6 +179,17 @@ public class NetworkManager : MonoBehaviour {
                 () => Debug.Log("Failed")
             ));
         }
-
+        if (Input.GetKeyDown(KeyCode.X))
+        {
+            StartCoroutine(handle.ListAppliances(
+                (GNS3Handle.Appliances appliances) => {
+                    foreach (var appliance in appliances.appliances)
+                    {
+                        Debug.Log(appliance.name + " " + appliance.appliance_id);
+                    }
+                },
+                () => Debug.Log("Failed")
+            ));
+        }
     }
 }
