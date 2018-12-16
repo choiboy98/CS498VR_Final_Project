@@ -3,16 +3,45 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
+
+public class GNS3Handle
+{
+    private string url;
+
+    public GNS3Handle(string ip, int port)
+    {
+        url = "http://" + ip + ":" + port.ToString() + "/v2/";
+        Debug.Log("Creating GNS3 handle at url " + url);
+    }
+
+    public IEnumerator HealthCheck()
+    {
+        var request = new UnityWebRequest(url + "version", "GET");
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.Log("HealthCheck: GNS3Handle appears to be unhealthy");
+        } else
+        {
+            Debug.Log("HealthCheck: GNS3Handle is healthy");
+        }
+    }
+
+}
+
 public class NetworkManager : MonoBehaviour {
     public GameObject routerPrefab;
     public GameObject switchPrefab;
+    private GNS3Handle handle;
     private string address = "http://192.168.56.1:3080/v2";
     private string projectId = "836c3bbb-6aa6-4817-8c73-4697a1946d4e";
 
     // Use this for initialization
     void Start () {
-		// Connect to server
-	}
+        // Connect to server
+        handle = new GNS3Handle("192.168.56.1", 3080);
+        StartCoroutine(handle.HealthCheck());
+    }
 
     IEnumerator CreateRouter()
     {
@@ -94,6 +123,11 @@ public class NetworkManager : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.C))
         {
             StartCoroutine(ListNodes());
+        }
+        if (Input.GetKeyDown(KeyCode.Z))
+        {
+            Debug.Log("Click Z");
+            StartCoroutine(handle.HealthCheck());
         }
 	}
 }
