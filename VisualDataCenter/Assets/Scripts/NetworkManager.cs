@@ -7,11 +7,13 @@ using UnityEngine.Networking;
 
 public class GNS3Handle
 {
+    public NetworkManager manager;
     public readonly string url;
     private List<Appliance> appliances;
 
-    public GNS3Handle(string ip, int port)
+    public GNS3Handle(string ip, int port, NetworkManager manager_)
     {
+        manager = manager_;
         url = "http://" + ip + ":" + port.ToString() + "/v2/";
         Debug.Log("Creating GNS3 handle at url " + url);
     }
@@ -124,6 +126,7 @@ public class GNS3ProjectHandle
 
     public GNS3ProjectHandle(GNS3Handle handle_, string project_id)
     {
+        nodes = new List<Node>();
         handle = handle_;
         url = handle.url + "projects/" + project_id;
     }
@@ -172,12 +175,21 @@ public class GNS3ProjectHandle
         }
     }
 
-    public IEnumerator CreateAppliance(string application_id)
+    public IEnumerator CreateAppliance(string appliance_id)
     {
+        // Get type of appliance
+        var appliances = handle.GetAppliances();
+        GNS3Handle.Appliance appliance = appliances.Find(app => app.appliance_id == appliance_id);
+        if (appliance == null)
+        {
+            Debug.Log("Appliance " + appliance_id + " seems to not exist");
+            yield break;
+        }
+
         string postData = @"{""compute_id"": ""vm"",""x"": 10,""y"": 10}";
         byte[] bodyRaw = Encoding.UTF8.GetBytes(postData);
 
-        var request = new UnityWebRequest(url + "/appliances/" + application_id, "POST");
+        var request = new UnityWebRequest(url + "/appliances/" + appliance_id, "POST");
         request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
         request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         request.SetRequestHeader("Content-Type", "application/json");
@@ -190,7 +202,45 @@ public class GNS3ProjectHandle
         else
         {
             // TODO
-            // GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
+            yield return ListNodes(
+                (List<Node> newNodes) =>
+                {
+                    var oldNodes = GetNodes();
+
+                    if (newNodes.Count != oldNodes.Count + 1)
+                    {
+                        Debug.Log("Tried to update project handle nodes but new node count (" + newNodes.Count.ToString() + ") does not match with old node count (" + oldNodes.Count.ToString() + ")");
+                        return;
+                    }
+
+                    foreach (var node in newNodes)
+                    {
+                        if (!oldNodes.Contains(node))
+                        {
+                            nodes.Add(node);
+                            if (appliance.category == "switch")
+                            {
+                                GameObject switch_ = GameObject.Instantiate(
+                                    handle.manager.switchPrefab,
+                                    handle.manager.transform.position + handle.manager.transform.forward,
+                                    Quaternion.identity
+                                );
+                            }
+                            else
+                            {
+                                GameObject router = GameObject.Instantiate(
+                                    handle.manager.routerPrefab,
+                                    handle.manager.transform.position + handle.manager.transform.forward,
+                                    Quaternion.identity
+                                );
+                            }
+                            Debug.Log("Successfully added new " + node.node_type + " node with id " + node.node_id);
+                        }
+                    }
+                },
+                () => Debug.Log("Failed to update project handle nodes")
+            );
+            //
             Debug.Log(request.downloadHandler.text);
         }
     }
@@ -266,6 +316,11 @@ public class GNS3ProjectHandle
             Debug.Log(request.downloadHandler.text);
         }
     }
+
+    public List<Node> GetNodes()
+    {
+        return nodes;
+    }
 }
 
 public class NetworkManager : MonoBehaviour {
@@ -280,7 +335,7 @@ public class NetworkManager : MonoBehaviour {
 
     // Use this for initialization
     void Start() {
-        handle = new GNS3Handle("192.168.56.1", 3080);
+        handle = new GNS3Handle("192.168.56.1", 3080, this);
         projectHandle = handle.ProjectHandle("abc46e15-c32a-45ae-9e86-e896ea0afac2");
         StartCoroutine(handle.CheckHealth(
             () => Debug.Log("Connection is good"),
