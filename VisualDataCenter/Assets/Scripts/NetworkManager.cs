@@ -263,17 +263,24 @@ public class GNS3ProjectHandle
 public class NetworkManager : MonoBehaviour {
     public GameObject routerPrefab;
     public GameObject switchPrefab;
+
     private GNS3Handle handle;
+    private GNS3ProjectHandle projectHandle;
+
     private string address = "http://192.168.56.1:3080/v2";
     private string projectId = "836c3bbb-6aa6-4817-8c73-4697a1946d4e";
 
     // Use this for initialization
     void Start() {
-        // Connect to server
         handle = new GNS3Handle("192.168.56.1", 3080);
+        projectHandle = handle.ProjectHandle("abc46e15-c32a-45ae-9e86-e896ea0afac2");
         StartCoroutine(handle.CheckHealth(
             () => Debug.Log("Connection is good"),
             () => Debug.Log("Connection is bad")
+        ));
+        StartCoroutine(projectHandle.CheckHealth(
+            () => Debug.Log("Project connection is good"),
+            () => Debug.Log("Project connection is bad")
         ));
     }
 
@@ -361,17 +368,14 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
-            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
             StartCoroutine(projectHandle.CreateAppliance("1966b864-93e7-32d5-965f-001384eec461"));
         }
         if (Input.GetKeyDown(KeyCode.B))
         {
-            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
             StartCoroutine(projectHandle.ListNodes());
         }
         if (Input.GetKeyDown(KeyCode.N))
         {
-            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
             StartCoroutine(projectHandle.CreateLink("9fc570aa-9a9a-4b95-a7f1-52e6677ba3a3", "07dd02b2-6890-402d-b4f2-0791251a8f98", 0, 0));
         }
     }
