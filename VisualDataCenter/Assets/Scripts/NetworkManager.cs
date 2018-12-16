@@ -204,6 +204,60 @@ public class GNS3ProjectHandle
             // onSuccess(appliances);
         }
     }
+
+    [System.Serializable]
+    public class LinkInput
+    {
+        public LinkInput(string nodeA_id, string nodeB_id, int nodeA_portNumber, int nodeB_portNumber)
+        {
+            nodes = new List<LinkInputNode>();
+            var a = new LinkInputNode();
+            a.adapter_number = nodeA_portNumber;
+            a.port_number = nodeA_portNumber;
+            a.node_id = nodeA_id;
+            var b = new LinkInputNode();
+            b.adapter_number = nodeB_portNumber;
+            b.port_number = nodeB_portNumber;
+            b.node_id = nodeB_id;
+            nodes.Add(a);
+            nodes.Add(b);
+        }
+
+        public List<LinkInputNode> nodes;
+    }
+
+    [System.Serializable]
+    public class LinkInputNode
+    {
+        public int adapter_number;
+        public string node_id;
+        public int port_number;
+    }
+
+    public IEnumerator CreateLink(string nodeA_id, string nodeB_id, int nodeA_portNumber, int nodeB_portNumber)
+    {
+        var input = new LinkInput(nodeA_id, nodeB_id, nodeA_portNumber, nodeB_portNumber);
+        string postData = JsonUtility.ToJson(input);
+
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(postData);
+
+        var request = new UnityWebRequest(url + "/links", "POST");
+        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.Log(request.downloadHandler.text);
+        }
+        else
+        {
+            // TODO
+            // GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
+            Debug.Log(request.downloadHandler.text);
+        }
+    }
 }
 
 public class NetworkManager : MonoBehaviour {
@@ -314,6 +368,11 @@ public class NetworkManager : MonoBehaviour {
         {
             var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
             StartCoroutine(projectHandle.ListNodes());
+        }
+        if (Input.GetKeyDown(KeyCode.N))
+        {
+            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
+            StartCoroutine(projectHandle.CreateLink("9fc570aa-9a9a-4b95-a7f1-52e6677ba3a3", "07dd02b2-6890-402d-b4f2-0791251a8f98", 0, 0));
         }
     }
 }
