@@ -218,9 +218,10 @@ public class GNS3ProjectHandle
                         if (!oldNodes.Contains(node))
                         {
                             nodes.Add(node);
+                            GameObject newAppliance = null;
                             if (appliance.category == "switch")
                             {
-                                GameObject switch_ = GameObject.Instantiate(
+                                newAppliance = GameObject.Instantiate(
                                     handle.manager.switchPrefab,
                                     handle.manager.transform.position + handle.manager.transform.forward,
                                     Quaternion.identity
@@ -228,12 +229,19 @@ public class GNS3ProjectHandle
                             }
                             else
                             {
-                                GameObject router = GameObject.Instantiate(
+                                newAppliance = GameObject.Instantiate(
                                     handle.manager.routerPrefab,
                                     handle.manager.transform.position + handle.manager.transform.forward,
                                     Quaternion.identity
                                 );
                             }
+                            var deviceScript = newAppliance.GetComponent<NetworkDevice>();
+                            if (deviceScript == null)
+                            {
+                                Debug.Log("CreateAppliance error: device does not have a NetworkDevice script attached to it");
+                                return;
+                            }
+                            deviceScript.node = node;
                             Debug.Log("Successfully added new " + node.node_type + " node with id " + node.node_id);
                         }
                     }
