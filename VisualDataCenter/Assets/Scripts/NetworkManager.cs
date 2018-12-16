@@ -338,9 +338,6 @@ public class NetworkManager : MonoBehaviour {
     private GNS3Handle handle;
     private GNS3ProjectHandle projectHandle;
 
-    private string address = "http://192.168.56.1:3080/v2";
-    private string projectId = "836c3bbb-6aa6-4817-8c73-4697a1946d4e";
-
     // Use this for initialization
     void Start() {
         handle = new GNS3Handle("192.168.56.1", 3080, this);
