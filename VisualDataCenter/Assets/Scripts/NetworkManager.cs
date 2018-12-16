@@ -72,9 +72,12 @@ public class GNS3Handle
         {
             onFailure();
         }
-        // :(
-        var projects = JsonUtility.FromJson<Projects>("{\"projects\":"+request.downloadHandler.text+"}");
-        onSuccess(projects);
+        else
+        {
+            // :(
+            var projects = JsonUtility.FromJson<Projects>("{\"projects\":" + request.downloadHandler.text + "}");
+            onSuccess(projects);
+        }
     }
 
     public IEnumerator ListAppliances(Action<Appliances> onSuccess, Action onFailure)
@@ -86,9 +89,12 @@ public class GNS3Handle
         {
             onFailure();
         }
-        // :(
-        var appliances = JsonUtility.FromJson<Appliances>("{\"appliances\":" + request.downloadHandler.text + "}");
-        onSuccess(appliances);
+        else
+        {
+            // :(
+            var appliances = JsonUtility.FromJson<Appliances>("{\"appliances\":" + request.downloadHandler.text + "}");
+            onSuccess(appliances);
+        }
     }
 
     public GNS3ProjectHandle ProjectHandle(string id)
@@ -106,6 +112,25 @@ public class GNS3ProjectHandle
         url = handle.url + "projects/" + project_id;
     }
 
+    [System.Serializable]
+    public class Nodes {
+        public List<Node> nodes;
+
+        public static Nodes CreateFromJSON(string json)
+        {
+            return JsonUtility.FromJson<Nodes>(json);
+        }
+    }
+
+    [System.Serializable]
+    public class Node
+    {
+        public string name;
+        public string node_id;
+        public string status;
+        public string node_type;
+    }
+
     public IEnumerator CheckHealth(Action onSuccess, Action onFailure)
     {
         Debug.Log("GET " + url);
@@ -118,6 +143,51 @@ public class GNS3ProjectHandle
         } else
         {
             onSuccess();
+        }
+    }
+
+    public IEnumerator CreateAppliance(string application_id)
+    {
+        string postData = @"{""compute_id"": ""vm"",""x"": 10,""y"": 10}";
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(postData);
+
+        var request = new UnityWebRequest(url + "/appliances/" + application_id, "POST");
+        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.Log(request.downloadHandler.text);
+        }
+        else
+        {
+            // TODO
+            // GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
+            Debug.Log(request.downloadHandler.text);
+        }
+    }
+
+    public IEnumerator ListNodes()
+    {
+        var request = new UnityWebRequest(url + "/nodes", "GET");
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            // onFailure();
+            Debug.Log("Error: " + request.downloadHandler.text);
+        }
+        else
+        {
+            // :(
+            var nodes = JsonUtility.FromJson<Nodes>("{\"nodes\":" + request.downloadHandler.text + "}");
+            foreach (var node in nodes.nodes)
+            {
+                Debug.Log(node.name + " " + node.node_id + " " + node.status + " " + node.node_type); 
+            }
+            // onSuccess(appliances);
         }
     }
 }
@@ -189,14 +259,6 @@ public class NetworkManager : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            CreateRouter();
-        }
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            StartCoroutine(CreateSwitch());
-        }
         if (Input.GetKeyDown(KeyCode.Z))
         {
             StartCoroutine(handle.ListProjects(
@@ -231,11 +293,13 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
-            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d");
-            StartCoroutine(projectHandle.CheckHealth(
-                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d connection is good"),
-                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d connection is bad")
-            ));
+            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
+            StartCoroutine(projectHandle.CreateAppliance("1966b864-93e7-32d5-965f-001384eec461"));
+        }
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
+            StartCoroutine(projectHandle.ListNodes());
         }
     }
 }
