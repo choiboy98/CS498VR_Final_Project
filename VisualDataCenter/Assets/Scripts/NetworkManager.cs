@@ -355,53 +355,6 @@ public class NetworkManager : MonoBehaviour {
         ));
     }
 
-    IEnumerator CreateRouter()
-    {
-        string postData = @"{""compute_id"": ""vm"",""x"": 10,""y"": 10}";
-        string url = "http://192.168.56.1:3080/v2/projects/836c3bbb-6aa6-4817-8c73-4697a1946d4e/appliances/1966b864-93e7-32d5-965f-001384eec461";
-
-        var request = new UnityWebRequest(url, "POST");
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(postData);
-
-        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-
-        request.SetRequestHeader("Content-Type", "application/json");
-        yield return request.SendWebRequest();
-        Debug.Log("Sent!");
-        if (request.isNetworkError || request.isHttpError)
-        {
-            Debug.Log(request.downloadHandler.text);
-        }
-        else
-        {
-            GameObject router = Instantiate(routerPrefab, transform.position + transform.forward, Quaternion.identity);
-        }
-    }
-
-    IEnumerator CreateSwitch()
-    {
-        string postData = @"{""compute_id"": ""vm"",""x"": 10,""y"": 10}";
-        string url = "http://192.168.56.1:3080/v2/projects/836c3bbb-6aa6-4817-8c73-4697a1946d4e/appliances/1966b864-93e7-32d5-965f-001384eec461";
-
-        var request = new UnityWebRequest(url, "POST");
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(postData);
-
-        request.uploadHandler = (UploadHandler)new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-
-        request.SetRequestHeader("Content-Type", "application/json");
-        yield return request.SendWebRequest();
-        Debug.Log("Sent!");
-        if (request.isNetworkError || request.isHttpError)
-        {
-            Debug.Log(request.downloadHandler.text);
-        } else
-        {
-            GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
-        }
-    }
-
     // Update is called once per frame
     void Update()
     {
