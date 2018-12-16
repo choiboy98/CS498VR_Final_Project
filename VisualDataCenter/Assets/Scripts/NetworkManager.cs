@@ -7,7 +7,7 @@ using UnityEngine.Networking;
 
 public class GNS3Handle
 {
-    private readonly string url;
+    public readonly string url;
 
     public GNS3Handle(string ip, int port)
     {
@@ -15,7 +15,7 @@ public class GNS3Handle
         Debug.Log("Creating GNS3 handle at url " + url);
     }
 
-    public IEnumerator HealthCheck(Action onSuccess, Action onFailure)
+    public IEnumerator CheckHealth(Action onSuccess, Action onFailure)
     {
         var request = new UnityWebRequest(url + "version", "GET");
         yield return request.SendWebRequest();
@@ -90,6 +90,36 @@ public class GNS3Handle
         var appliances = JsonUtility.FromJson<Appliances>("{\"appliances\":" + request.downloadHandler.text + "}");
         onSuccess(appliances);
     }
+
+    public GNS3ProjectHandle ProjectHandle(string id)
+    {
+        return new GNS3ProjectHandle(this, id);
+    }
+}
+
+public class GNS3ProjectHandle
+{
+    private readonly string url;
+
+    public GNS3ProjectHandle(GNS3Handle handle, string project_id)
+    {
+        url = handle.url + "projects/" + project_id;
+    }
+
+    public IEnumerator CheckHealth(Action onSuccess, Action onFailure)
+    {
+        Debug.Log("GET " + url);
+        var request = new UnityWebRequest(url, "GET");
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            onFailure();
+        } else
+        {
+            onSuccess();
+        }
+    }
 }
 
 public class NetworkManager : MonoBehaviour {
@@ -103,7 +133,7 @@ public class NetworkManager : MonoBehaviour {
     void Start() {
         // Connect to server
         handle = new GNS3Handle("192.168.56.1", 3080);
-        StartCoroutine(handle.HealthCheck(
+        StartCoroutine(handle.CheckHealth(
             () => Debug.Log("Connection is good"),
             () => Debug.Log("Connection is bad")
         ));
@@ -189,6 +219,22 @@ public class NetworkManager : MonoBehaviour {
                     }
                 },
                 () => Debug.Log("Failed")
+            ));
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
+            StartCoroutine(projectHandle.CheckHealth(
+                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c connection is good"),
+                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c connection is bad")
+            ));
+        }
+        if (Input.GetKeyDown(KeyCode.V))
+        {
+            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d");
+            StartCoroutine(projectHandle.CheckHealth(
+                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d connection is good"),
+                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71d connection is bad")
             ));
         }
     }
