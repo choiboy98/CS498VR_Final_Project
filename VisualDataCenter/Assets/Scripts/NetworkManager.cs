@@ -129,6 +129,16 @@ public class GNS3ProjectHandle
         public string node_id;
         public string status;
         public string node_type;
+        public List<Port> ports;
+    }
+
+    [System.Serializable]
+    public class Port
+    {
+        public int adapter_number;
+        public string link_type;
+        public string name;
+        public int port_number;
     }
 
     public IEnumerator CheckHealth(Action onSuccess, Action onFailure)
@@ -185,7 +195,11 @@ public class GNS3ProjectHandle
             var nodes = JsonUtility.FromJson<Nodes>("{\"nodes\":" + request.downloadHandler.text + "}");
             foreach (var node in nodes.nodes)
             {
-                Debug.Log(node.name + " " + node.node_id + " " + node.status + " " + node.node_type); 
+                Debug.Log(node.name + " " + node.node_id + " " + node.status + " " + node.node_type);
+                foreach (var port in node.ports)
+                {
+                    Debug.Log(port.name + " " + port.port_number);
+                }
             }
             // onSuccess(appliances);
         }
