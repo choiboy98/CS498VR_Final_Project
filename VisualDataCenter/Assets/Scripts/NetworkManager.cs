@@ -8,6 +8,7 @@ using UnityEngine.Networking;
 public class GNS3Handle
 {
     public readonly string url;
+    private List<Appliance> appliances;
 
     public GNS3Handle(string ip, int port)
     {
@@ -22,8 +23,15 @@ public class GNS3Handle
         if (request.isNetworkError || request.isHttpError)
         {
             onFailure();
+        } 
+        else
+        {
+            onSuccess();
+            yield return ListAppliances(
+                (Appliances appliances_) => appliances = appliances_.appliances,
+                () => Debug.Log("ListAppliances failed")
+            );
         }
-        onSuccess();
     }
 
     [System.Serializable]
@@ -97,6 +105,11 @@ public class GNS3Handle
         }
     }
 
+    public List<Appliance> GetAppliances()
+    {
+        return appliances;
+    }
+
     public GNS3ProjectHandle ProjectHandle(string id)
     {
         return new GNS3ProjectHandle(this, id);
@@ -105,6 +118,7 @@ public class GNS3Handle
 
 public class GNS3ProjectHandle
 {
+    private List<Node> nodes;
     private readonly string url;
 
     public GNS3ProjectHandle(GNS3Handle handle, string project_id)
@@ -348,15 +362,11 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.X))
         {
-            StartCoroutine(handle.ListAppliances(
-                (GNS3Handle.Appliances appliances) => {
-                    foreach (var appliance in appliances.appliances)
-                    {
-                        Debug.Log(appliance.name + " " + appliance.appliance_id);
-                    }
-                },
-                () => Debug.Log("Failed")
-            ));
+            var appliances = handle.GetAppliances();
+            foreach (var appliance in appliances)
+            {
+                Debug.Log(appliance.name + " " + appliance.appliance_id + " " + appliance.category);
+            }
         }
         if (Input.GetKeyDown(KeyCode.C))
         {
