@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -14,19 +15,53 @@ public class GNS3Handle
         Debug.Log("Creating GNS3 handle at url " + url);
     }
 
-    public IEnumerator HealthCheck()
+    public IEnumerator HealthCheck(Action onSuccess, Action onFailure)
     {
         var request = new UnityWebRequest(url + "version", "GET");
         yield return request.SendWebRequest();
         if (request.isNetworkError || request.isHttpError)
         {
-            Debug.Log("HealthCheck: GNS3Handle appears to be unhealthy");
-        } else
+            onFailure();
+        }
+        onSuccess();
+    }
+
+    [System.Serializable]
+    public class Projects
+    {
+        public List<Project> projects;
+
+        public static Projects CreateFromJSON(string json)
         {
-            Debug.Log("HealthCheck: GNS3Handle is healthy");
+            return JsonUtility.FromJson<Projects>(json);
         }
     }
 
+    [System.Serializable]
+    public class Project
+    {
+        public string name;
+        public string project_id;
+
+        public static Project CreateFromJSON(string json)
+        {
+            return JsonUtility.FromJson<Project>(json);
+        }
+    }
+
+    public IEnumerator ListProjects(Action<Projects> onSuccess, Action onFailure)
+    {
+        var request = new UnityWebRequest(url + "projects", "GET");
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        yield return request.SendWebRequest();
+        if (request.isNetworkError || request.isHttpError)
+        {
+            onFailure();
+        }
+        // :(
+        var projects = JsonUtility.FromJson<Projects>("{\"projects\":"+request.downloadHandler.text+"}");
+        onSuccess(projects);
+    }
 }
 
 public class NetworkManager : MonoBehaviour {
@@ -37,10 +72,13 @@ public class NetworkManager : MonoBehaviour {
     private string projectId = "836c3bbb-6aa6-4817-8c73-4697a1946d4e";
 
     // Use this for initialization
-    void Start () {
+    void Start() {
         // Connect to server
         handle = new GNS3Handle("192.168.56.1", 3080);
-        StartCoroutine(handle.HealthCheck());
+        StartCoroutine(handle.HealthCheck(
+            () => Debug.Log("Connection is good"),
+            () => Debug.Log("Connection is bad")
+        ));
     }
 
     IEnumerator CreateRouter()
@@ -67,26 +105,6 @@ public class NetworkManager : MonoBehaviour {
         }
     }
 
-    IEnumerator ListNodes()
-    {
-        string url = address + "/projects/" + projectId + "/nodes";
-        Debug.Log("GET " + url);
-
-        var request = new UnityWebRequest(url, "GET");
-
-        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
-
-        yield return request.SendWebRequest();
-        if (request.isNetworkError || request.isHttpError)
-        {
-            Debug.Log(request.downloadHandler.text);
-        } else
-        {
-            Debug.Log(request.downloadHandler.text);
-        }
-        // TODO parse JSON to get the node ids
-    }
-
     IEnumerator CreateSwitch()
     {
         string postData = @"{""compute_id"": ""vm"",""x"": 10,""y"": 10}";
@@ -109,10 +127,11 @@ public class NetworkManager : MonoBehaviour {
             GameObject switch_ = Instantiate(switchPrefab, transform.position + transform.forward, Quaternion.identity);
         }
     }
-	
-	// Update is called once per frame
-	void Update () {
-		if (Input.GetKeyDown(KeyCode.A))
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.A))
         {
             CreateRouter();
         }
@@ -120,14 +139,18 @@ public class NetworkManager : MonoBehaviour {
         {
             StartCoroutine(CreateSwitch());
         }
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            StartCoroutine(ListNodes());
-        }
         if (Input.GetKeyDown(KeyCode.Z))
         {
-            Debug.Log("Click Z");
-            StartCoroutine(handle.HealthCheck());
+            StartCoroutine(handle.ListProjects(
+                (GNS3Handle.Projects projects) => {
+                    foreach (var project in projects.projects)
+                    {
+                        Debug.Log(project.name + " " + project.project_id);
+                    }
+                },
+                () => Debug.Log("Failed")
+            ));
         }
-	}
+
+    }
 }
