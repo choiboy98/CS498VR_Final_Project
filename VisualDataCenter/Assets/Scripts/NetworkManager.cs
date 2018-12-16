@@ -120,9 +120,11 @@ public class GNS3ProjectHandle
 {
     private List<Node> nodes;
     private readonly string url;
+    private readonly GNS3Handle handle;
 
-    public GNS3ProjectHandle(GNS3Handle handle, string project_id)
+    public GNS3ProjectHandle(GNS3Handle handle_, string project_id)
     {
+        handle = handle_;
         url = handle.url + "projects/" + project_id;
     }
 
@@ -193,29 +195,21 @@ public class GNS3ProjectHandle
         }
     }
 
-    public IEnumerator ListNodes()
+    public IEnumerator ListNodes(Action<List<Node>> onSuccess, Action onFailure)
     {
         var request = new UnityWebRequest(url + "/nodes", "GET");
         request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
         yield return request.SendWebRequest();
         if (request.isNetworkError || request.isHttpError)
         {
-            // onFailure();
+            onFailure();
             Debug.Log("Error: " + request.downloadHandler.text);
         }
         else
         {
             // :(
             var nodes = JsonUtility.FromJson<Nodes>("{\"nodes\":" + request.downloadHandler.text + "}");
-            foreach (var node in nodes.nodes)
-            {
-                Debug.Log(node.name + " " + node.node_id + " " + node.status + " " + node.node_type);
-                foreach (var port in node.ports)
-                {
-                    Debug.Log(port.name + " " + port.port_number);
-                }
-            }
-            // onSuccess(appliances);
+            onSuccess(nodes.nodes);
         }
     }
 
@@ -370,11 +364,6 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.C))
         {
-            var projectHandle = handle.ProjectHandle("7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c");
-            StartCoroutine(projectHandle.CheckHealth(
-                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c connection is good"),
-                () => Debug.Log("Project 7ad8c8fd-ccc9-4ec6-b1c6-4b8c27d5c71c connection is bad")
-            ));
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
@@ -382,7 +371,16 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.B))
         {
-            StartCoroutine(projectHandle.ListNodes());
+            StartCoroutine(projectHandle.ListNodes(
+                (List<GNS3ProjectHandle.Node> nodes) =>
+                {
+                    foreach (var node in nodes)
+                    {
+                        Debug.Log(node.name);
+                    }
+                },
+                () => Debug.Log("ListNodes failed")
+            ));
         }
         if (Input.GetKeyDown(KeyCode.N))
         {
