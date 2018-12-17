@@ -20,17 +20,26 @@ public class BackgroundCharacterControllerOne : MonoBehaviour {
 
     // Update is called once per frame
     void Update () {
-        animChar.SetBool("isTutorial", true);
         if (transform.position != target[current].position && current < target.Length)
         {
+            animChar.SetBool("isTutorial", true);
+            animChar.SetBool("idleTutorial", false);
             handleRotation(current);
             Vector3 pos = Vector3.MoveTowards(transform.position, target[current].position, speed * Time.deltaTime);
             GetComponent<Rigidbody>().MovePosition(pos);
         }
         else
         {
+            StartCoroutine(pause());
             current = (current + 1) % target.Length;
         }
+    }
+
+    IEnumerator pause() {
+        print("pausing");
+        animChar.SetBool("idleTutorial", true);
+        animChar.SetBool("isTutorial", false);
+        yield return new WaitForSeconds(3);
     }
 
     void handleRotation(int current)

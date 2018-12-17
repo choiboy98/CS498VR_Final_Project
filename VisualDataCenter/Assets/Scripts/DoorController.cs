@@ -22,6 +22,10 @@ public class DoorController : MonoBehaviour {
         {
             anim.SetBool("isOpen", true);
         }
+        if (other.tag == "user")
+        {
+            Application.LoadLevel(1);
+        }
     }
 
     private void OnTriggerExit(Collider other)
