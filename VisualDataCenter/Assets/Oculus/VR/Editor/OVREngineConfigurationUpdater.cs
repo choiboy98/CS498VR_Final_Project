@@ -106,7 +106,7 @@ class OVREngineConfigurationUpdater
 		if (!setPrefsForUtilities)
 			return;
 
-		OVRPlugin.SendEvent("build_target", EditorUserBuildSettings.activeBuildTarget.ToString());
+		OVRPlugin.AddCustomMetadata("build_target", EditorUserBuildSettings.activeBuildTarget.ToString());
 		EnforceAndroidSettings();
 		EnforceInputManagerBindings();
 #if UNITY_ANDROID
