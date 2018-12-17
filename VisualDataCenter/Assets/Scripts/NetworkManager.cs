@@ -182,6 +182,11 @@ public class GNS3ProjectHandle
         public List<Port> ports;
         public int console;
         public string console_host;
+        public string console_type;
+
+        // If this is a node in a Link then this represents that data, otherwise ignore
+        public int adapter_number;
+        public int port_number;
     }
 
     [System.Serializable]
@@ -436,6 +441,7 @@ public class GNS3ProjectHandle
             var writeThread = new Thread(start: new ParameterizedThreadStart(runTCPWriteThread));
 
             readThread.Start(args);
+            Thread.Sleep(15000);
             writeThread.Start(args);
         }
         catch (ArgumentNullException e)
@@ -445,7 +451,6 @@ public class GNS3ProjectHandle
         catch (SocketException e)
         {
             Debug.Log("SocketException: " + e);
-            Debug.Log(client.Connected);
         }
     }
 
@@ -460,7 +465,15 @@ public class GNS3ProjectHandle
         {
             var toWrite = writeQueue.Dequeue();
             Byte[] data = System.Text.Encoding.ASCII.GetBytes(toWrite);
-            stream.Write(data, 0, data.Length);
+            try
+            {
+                stream.Write(data, 0, data.Length);
+            }
+            catch (Exception e)
+            {
+                Debug.Log("write Exception: " + e);
+                return;
+            }
         }
     }
 
@@ -471,16 +484,44 @@ public class GNS3ProjectHandle
         var readQueue = args.read;
         var stream = client.GetStream();
 
-        while (true)
+        int bytes;
+        Byte[] data = new Byte[256];
+        try
         {
-            Byte[] data = new Byte[256];
-            var bytes = stream.Read(data, 0, data.Length);
-            var response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
-            Debug.Log("Received: " + response);
-            readQueue.Enqueue(response);
+            while ((bytes = stream.Read(data, 0, data.Length)) != 0)
+            {
+                bytes = stream.Read(data, 0, data.Length);
+                var response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+                readQueue.Enqueue(response);
+                Debug.Log("response: " + response);
+            }
+        }
+        catch (SocketException e)
+        {
+            Debug.Log("ReadThread: " + e);
+        }
+        finally
+        {
+            client.Close();
+            Debug.Log("Leaving ReadThread");
         }
     }
 
+    public List<Port> GetAvailablePorts(string node_id)
+    {
+        Node node = nodes.Find(n => n.node_id == node_id);
+        if (node == null)
+        {
+            Debug.Log("No such node " + node_id);
+            return new List<Port>();
+        }
+        var ports = new List<Port>();
+        foreach (var link in links)
+        {
+            
+        }
+        return new List<Port>();
+    }
 
     public List<Node> GetNodes()
     {
@@ -552,11 +593,11 @@ public class NetworkManager : MonoBehaviour {
             args.read = reader;
             projectHandle.ConnectTo(args);
             Thread.Sleep(100);
-            writer.Enqueue("help\n");
+            writer.Enqueue("\r\r\r\rconf t\rint fa0/0\rip address 192.168.1.1 255.255.255.0\r");
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
-            StartCoroutine(projectHandle.CreateAppliance("1966b864-93e7-32d5-965f-001384eec461"));
+            StartCoroutine(projectHandle.CreateAppliance("7465a102-5c54-4cc6-ab76-7e917955223b"));
         }
         if (Input.GetKeyDown(KeyCode.B))
         {
@@ -565,7 +606,7 @@ public class NetworkManager : MonoBehaviour {
                 {
                     foreach (var node in nodes)
                     {
-                        Debug.Log(node.name);
+                        Debug.Log(node.name + " " + node.console_type);
                     }
                 },
                 () => Debug.Log("ListNodes failed")
