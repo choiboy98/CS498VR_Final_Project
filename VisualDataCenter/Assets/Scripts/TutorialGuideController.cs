@@ -57,6 +57,7 @@ public class TutorialGuideController : MonoBehaviour {
         }
 
         if (current == 2) {
+            this.GetComponent<AudioSource>().Play();
             animChar.SetBool("isTutorial", false);
             animChar.SetBool("idleTutorial", true);
             animChar.SetBool("isTalking", true);

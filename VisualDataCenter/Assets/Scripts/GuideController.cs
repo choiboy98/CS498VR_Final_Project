@@ -78,6 +78,7 @@ public class GuideController : MonoBehaviour {
         
         if (!talking && Mathf.Abs(user.transform.position.z) - Mathf.Abs(this.transform.position.z) < 4f && Input.GetKeyDown(KeyCode.X) && !isTalking)
         {
+            this.GetComponent<AudioSource>().Play();
             initialCanvas.SetActive(false);
             conversation(message[0]);
         }
