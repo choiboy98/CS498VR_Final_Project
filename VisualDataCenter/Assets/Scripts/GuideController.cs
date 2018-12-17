@@ -8,8 +8,9 @@ public class GuideController : MonoBehaviour {
     public Animator animChar;
     public GameObject user;
     public GameObject canvas;
+    public GameObject initialCanvas;
 
-    public float letterPause = 0.1f;
+    public float letterPause = 0.07f;
     public string[] message;
     public Text dialogue;
 
@@ -19,11 +20,17 @@ public class GuideController : MonoBehaviour {
     private bool forthTalk;
     private bool tutorialReady;
     private bool tutorialStart;
+    private bool isTalking;
 
     public Transform[] target;
     public float speed;
 
     private int current;
+    private float time;
+
+    public GameObject redX;
+    public GameObject whiteX;
+    public GameObject textX;
 
 	// Use this for initialization
 	void Start () {
@@ -34,6 +41,9 @@ public class GuideController : MonoBehaviour {
         forthTalk = false;
         tutorialReady = false;
         tutorialStart = false;
+        isTalking = false;
+
+        time = 0;
 
         message = new string[5];
         message[0] = "Hi! Welcome to our New Data Center!";
@@ -52,7 +62,7 @@ public class GuideController : MonoBehaviour {
         if (tutorialStart) {
           
             animChar.SetBool("isTutorial", true);
-            if (transform.position != target[current].position && current < target.Length)
+            if (current < target.Length && transform.position != target[current].position)
             {
                 handleRotation(current);
                 Vector3 pos = Vector3.MoveTowards(transform.position, target[current].position, speed * Time.deltaTime);
@@ -65,23 +75,25 @@ public class GuideController : MonoBehaviour {
 	}
 
     void handleConversation() {
-        if (!talking && Mathf.Abs(user.transform.position.z) - Mathf.Abs(this.transform.position.z) < 4f && Input.GetKeyDown(KeyCode.X))
+        
+        if (!talking && Mathf.Abs(user.transform.position.z) - Mathf.Abs(this.transform.position.z) < 4f && Input.GetKeyDown(KeyCode.X) && !isTalking)
         {
+            initialCanvas.SetActive(false);
             conversation(message[0]);
         }
-        else if (secondTalk && Input.GetKeyDown(KeyCode.X) && !thirdTalk)
+        else if (secondTalk && Input.GetKeyDown(KeyCode.X) && !thirdTalk && !isTalking)
         {
             conversation(message[1]);
         }
-        else if (thirdTalk && Input.GetKeyDown(KeyCode.X) && !forthTalk)
+        else if (thirdTalk && Input.GetKeyDown(KeyCode.X) && !forthTalk && !isTalking)
         {
             conversation(message[2]);
         }
-        else if (forthTalk && Input.GetKeyDown(KeyCode.X) && !tutorialReady)
+        else if (forthTalk && Input.GetKeyDown(KeyCode.X) && !tutorialReady && !isTalking)
         {
             conversation(message[3]);
         }
-        else if (tutorialReady && Input.GetKeyDown(KeyCode.X))
+        else if (tutorialReady && Input.GetKeyDown(KeyCode.X) && !isTalking)
         {
             conversation(message[4]);
         }
@@ -95,10 +107,19 @@ public class GuideController : MonoBehaviour {
     }
     IEnumerator startText(string text) {
         dialogue.text = "";
+        redX.SetActive(false);
+        whiteX.SetActive(false);
+        textX.SetActive(false);
+        isTalking = true;
         foreach (char letter in text.ToCharArray()) {
             dialogue.text += letter;
             yield return new WaitForSeconds(letterPause);
         }
+
+        isTalking = false;
+
+        redX.SetActive(true);
+        textX.SetActive(true);
         if (!secondTalk)
         {
             secondTalk = true;
@@ -116,6 +137,9 @@ public class GuideController : MonoBehaviour {
             tutorialReady = true;
         }
         else {
+            redX.SetActive(false);
+            whiteX.SetActive(false);
+            textX.SetActive(false);
             animChar.SetBool("isTalking", false);
             canvas.SetActive(false);
             tutorialStart = true;
