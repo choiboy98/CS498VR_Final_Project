@@ -31,7 +31,7 @@ public class GNS3Handle
         if (request.isNetworkError || request.isHttpError)
         {
             onFailure();
-        } 
+        }
         else
         {
             onSuccess();
@@ -163,7 +163,8 @@ public class GNS3ProjectHandle
     }
 
     [System.Serializable]
-    public class Nodes {
+    public class Nodes
+    {
         public List<Node> nodes;
 
         public static Nodes CreateFromJSON(string json)
@@ -207,7 +208,8 @@ public class GNS3ProjectHandle
         if (request.isNetworkError || request.isHttpError)
         {
             onFailure();
-        } else
+        }
+        else
         {
             onSuccess();
         }
@@ -384,7 +386,7 @@ public class GNS3ProjectHandle
         }
 
     }
-    
+
     public IEnumerator StopNode(string id)
     {
         var request = new UnityWebRequest(url + "/nodes/" + id + "/stop", "POST");
@@ -418,6 +420,86 @@ public class GNS3ProjectHandle
     {
         var thread = new Thread(start: new ParameterizedThreadStart(runTCPThread));
         thread.Start(args);
+    }
+
+    public void SendToConsole(Node node, string command)
+    {
+        try
+        {
+            TcpClient client = new TcpClient();
+            IPAddress ipAddress = IPAddress.Parse(node.console_host);
+            IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, node.console);
+            client.Connect(ipEndPoint);
+
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    Byte[] data = System.Text.Encoding.ASCII.GetBytes(command);
+                    client.GetStream().Write(data, 0, data.Length);
+                }
+                catch (SocketException e)
+                {
+                    Debug.Log(e);
+                }
+                finally
+                {
+                    client.Close();
+                }
+            });
+
+            thread.Start();
+        }
+        catch (ArgumentNullException e)
+        {
+            Debug.Log("ArgumentNullException: " + e);
+        }
+        catch (SocketException e)
+        {
+            Debug.Log("SocketException: " + e);
+        }
+    }
+
+    public void StreamFromConsole(Node node, Action<string> onRead)
+    {
+        try
+        {
+            TcpClient client = new TcpClient();
+            IPAddress ipAddress = IPAddress.Parse(node.console_host);
+            IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, node.console);
+            client.Connect(ipEndPoint);
+
+            var thread = new Thread(() =>
+            {
+                Byte[] data = new Byte[256];
+                Int32 numBytes;
+                try
+                {
+                    while ((numBytes = client.GetStream().Read(data, 0, data.Length)) != 0)
+                    {
+                        var received = System.Text.Encoding.ASCII.GetString(data, 0, numBytes);
+                        onRead(received);
+                    }
+                }
+                catch (SocketException e)
+                {
+                    Debug.Log(e);
+                }
+                finally
+                {
+                    client.Close();
+                }
+            });
+            thread.Start();
+        }
+        catch (ArgumentNullException e)
+        {
+            Debug.Log("ArgumentNullException: " + e);
+        }
+        catch (SocketException e)
+        {
+            Debug.Log("SocketException: " + e);
+        }
     }
 
     private void runTCPThread(object args_)
@@ -518,7 +600,7 @@ public class GNS3ProjectHandle
         var ports = new List<Port>();
         foreach (var link in links)
         {
-            
+
         }
         return new List<Port>();
     }
@@ -534,7 +616,8 @@ public class GNS3ProjectHandle
     }
 }
 
-public class NetworkManager : MonoBehaviour {
+public class NetworkManager : MonoBehaviour
+{
     public GameObject routerPrefab;
     public GameObject switchPrefab;
 
@@ -545,7 +628,8 @@ public class NetworkManager : MonoBehaviour {
     BlockingQueue<string> writer;
 
     // Use this for initialization
-    void Start() {
+    void Start()
+    {
         handle = new GNS3Handle("192.168.56.1", 3080, this);
         projectHandle = handle.ProjectHandle("abc46e15-c32a-45ae-9e86-e896ea0afac2");
         StartCoroutine(handle.CheckHealth(
@@ -587,13 +671,8 @@ public class NetworkManager : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.C))
         {
             var nodes = projectHandle.GetNodes();
-            var args = new GNS3ProjectHandle.ConsoleConnectArgs();
-            args.node = nodes[0];
-            args.write = writer;
-            args.read = reader;
-            projectHandle.ConnectTo(args);
-            Thread.Sleep(100);
-            writer.Enqueue("\r\r\r\rconf t\rint fa0/0\rip address 192.168.1.1 255.255.255.0\r");
+            projectHandle.SendToConsole(nodes[0], "\rconf t\rint fa0/0\rip address 192.168.1.1 255.255.255.0\rno shutdown\rend\r");
+            projectHandle.StreamFromConsole(nodes[0], (s) => Debug.Log(s));
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
@@ -618,11 +697,13 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.U))
         {
-            StartCoroutine(projectHandle.StartNode("0453abfb-900b-44cb-811c-ea77e79fda6c"));
+            var nodes = projectHandle.GetNodes();
+            StartCoroutine(projectHandle.StartNode(nodes[0].node_id));
         }
         if (Input.GetKeyDown(KeyCode.I))
         {
-            StartCoroutine(projectHandle.StopNode("0453abfb-900b-44cb-811c-ea77e79fda6c"));
+            var nodes = projectHandle.GetNodes();
+            StartCoroutine(projectHandle.StopNode(nodes[0].node_id));
         }
     }
 }
