@@ -76,25 +76,25 @@ public class GuideController : MonoBehaviour {
 
     void handleConversation() {
         
-        if (!talking && Mathf.Abs(user.transform.position.z) - Mathf.Abs(this.transform.position.z) < 4f && Input.GetKeyDown(KeyCode.X) && !isTalking)
+        if (!talking && Mathf.Abs(user.transform.position.z) - Mathf.Abs(this.transform.position.z) < 4f && (OVRInput.GetDown(OVRInput.Button.One)) && !isTalking)
         {
             this.GetComponent<AudioSource>().Play();
             initialCanvas.SetActive(false);
             conversation(message[0]);
         }
-        else if (secondTalk && Input.GetKeyDown(KeyCode.X) && !thirdTalk && !isTalking)
+        else if (secondTalk && (OVRInput.GetDown(OVRInput.Button.One)) && !thirdTalk && !isTalking)
         {
             conversation(message[1]);
         }
-        else if (thirdTalk && Input.GetKeyDown(KeyCode.X) && !forthTalk && !isTalking)
+        else if (thirdTalk && (OVRInput.GetDown(OVRInput.Button.One)) && !forthTalk && !isTalking)
         {
             conversation(message[2]);
         }
-        else if (forthTalk && Input.GetKeyDown(KeyCode.X) && !tutorialReady && !isTalking)
+        else if (forthTalk && (OVRInput.GetDown(OVRInput.Button.One)) && !tutorialReady && !isTalking)
         {
             conversation(message[3]);
         }
-        else if (tutorialReady && Input.GetKeyDown(KeyCode.X) && !isTalking)
+        else if (tutorialReady && (OVRInput.GetDown(OVRInput.Button.One)) && !isTalking)
         {
             conversation(message[4]);
         }
