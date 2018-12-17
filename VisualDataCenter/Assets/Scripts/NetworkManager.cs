@@ -1,9 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
+using System.Threading.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
+
 
 public class GNS3Handle
 {
@@ -174,6 +180,8 @@ public class GNS3ProjectHandle
         public string status;
         public string node_type;
         public List<Port> ports;
+        public int console;
+        public string console_host;
     }
 
     [System.Serializable]
@@ -351,6 +359,129 @@ public class GNS3ProjectHandle
         Debug.Log("Successfully created link with id " + link.link_id + " connecting nodes " + link.nodes[0].node_id + " and " + link.nodes[1].node_id);
     }
 
+    public IEnumerator StartNode(string id)
+    {
+        var request = new UnityWebRequest(url + "/nodes/" + id + "/start", "POST");
+
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+
+        yield return request.SendWebRequest();
+
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.Log("Failed to start node " + id);
+            Debug.Log(request.downloadHandler.text);
+        }
+        else
+        {
+            Debug.Log("Successfully started node " + id);
+            Debug.Log(request.downloadHandler.text);
+        }
+
+    }
+    
+    public IEnumerator StopNode(string id)
+    {
+        var request = new UnityWebRequest(url + "/nodes/" + id + "/stop", "POST");
+
+        request.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+
+        yield return request.SendWebRequest();
+
+        if (request.isNetworkError || request.isHttpError)
+        {
+            Debug.Log("Failed to stop node " + id);
+            Debug.Log(request.downloadHandler.text);
+        }
+        else
+        {
+            Debug.Log("Successfully stopped node " + id);
+            Debug.Log(request.downloadHandler.text);
+        }
+    }
+
+    public class ConsoleConnectArgs
+    {
+        public Node node;
+        public TcpClient client;
+        public BlockingQueue<string> read;
+        public BlockingQueue<string> write;
+    }
+
+    // This starts a thread that runs a TCP connection to the input node console and returns a read queue and a write queue
+    public void ConnectTo(ConsoleConnectArgs args)
+    {
+        var thread = new Thread(start: new ParameterizedThreadStart(runTCPThread));
+        thread.Start(args);
+    }
+
+    private void runTCPThread(object args_)
+    {
+        ConsoleConnectArgs args = (ConsoleConnectArgs)args_;
+        Node node = args.node;
+        var read = args.read;
+        var write = args.write;
+        TcpClient client = new TcpClient();
+
+        Debug.Log("Attempting to connect to console at " + node.console_host + ":" + node.console.ToString());
+        try
+        {
+            IPAddress ipAddress = IPAddress.Parse(node.console_host);
+            IPEndPoint ipEndPoint = new IPEndPoint(ipAddress, node.console);
+            client.Connect(ipEndPoint);
+
+            args.client = client;
+
+            var readThread = new Thread(start: new ParameterizedThreadStart(runTCPReadThread));
+            var writeThread = new Thread(start: new ParameterizedThreadStart(runTCPWriteThread));
+
+            readThread.Start(args);
+            writeThread.Start(args);
+        }
+        catch (ArgumentNullException e)
+        {
+            Debug.Log("ArgumentNullException: " + e);
+        }
+        catch (SocketException e)
+        {
+            Debug.Log("SocketException: " + e);
+            Debug.Log(client.Connected);
+        }
+    }
+
+    private void runTCPWriteThread(object args_)
+    {
+        ConsoleConnectArgs args = (ConsoleConnectArgs)args_;
+        var client = args.client;
+        var writeQueue = args.write;
+        var stream = client.GetStream();
+
+        while (true)
+        {
+            var toWrite = writeQueue.Dequeue();
+            Byte[] data = System.Text.Encoding.ASCII.GetBytes(toWrite);
+            stream.Write(data, 0, data.Length);
+        }
+    }
+
+    private void runTCPReadThread(object args_)
+    {
+        ConsoleConnectArgs args = (ConsoleConnectArgs)args_;
+        var client = args.client;
+        var readQueue = args.read;
+        var stream = client.GetStream();
+
+        while (true)
+        {
+            Byte[] data = new Byte[256];
+            var bytes = stream.Read(data, 0, data.Length);
+            var response = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+            Debug.Log("Received: " + response);
+            readQueue.Enqueue(response);
+        }
+    }
+
+
     public List<Node> GetNodes()
     {
         return nodes;
@@ -369,6 +500,9 @@ public class NetworkManager : MonoBehaviour {
     private GNS3Handle handle;
     private GNS3ProjectHandle projectHandle;
 
+    BlockingQueue<string> reader;
+    BlockingQueue<string> writer;
+
     // Use this for initialization
     void Start() {
         handle = new GNS3Handle("192.168.56.1", 3080, this);
@@ -381,6 +515,9 @@ public class NetworkManager : MonoBehaviour {
             () => Debug.Log("Project connection is good"),
             () => Debug.Log("Project connection is bad")
         ));
+
+        reader = new BlockingQueue<string>();
+        writer = new BlockingQueue<string>();
     }
 
     // Update is called once per frame
@@ -408,6 +545,14 @@ public class NetworkManager : MonoBehaviour {
         }
         if (Input.GetKeyDown(KeyCode.C))
         {
+            var nodes = projectHandle.GetNodes();
+            var args = new GNS3ProjectHandle.ConsoleConnectArgs();
+            args.node = nodes[0];
+            args.write = writer;
+            args.read = reader;
+            projectHandle.ConnectTo(args);
+            Thread.Sleep(100);
+            writer.Enqueue("help\n");
         }
         if (Input.GetKeyDown(KeyCode.V))
         {
@@ -429,6 +574,14 @@ public class NetworkManager : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.N))
         {
             StartCoroutine(projectHandle.CreateLink("0453abfb-900b-44cb-811c-ea77e79fda6c", "5b2ca014-913b-4a72-b6bc-23588cd34c48", 0, 0));
+        }
+        if (Input.GetKeyDown(KeyCode.U))
+        {
+            StartCoroutine(projectHandle.StartNode("0453abfb-900b-44cb-811c-ea77e79fda6c"));
+        }
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            StartCoroutine(projectHandle.StopNode("0453abfb-900b-44cb-811c-ea77e79fda6c"));
         }
     }
 }
