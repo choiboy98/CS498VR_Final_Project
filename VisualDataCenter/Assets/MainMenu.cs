@@ -8,13 +8,14 @@ public class MainMenu : MonoBehaviour
     public GameObject subMenu;
     public GameObject linkMenu;
 
+    public CreateSubMenu subMenuScript;
+
+    RackObjectData.ObjectData server;
+
     // MAIN MENU ONLY
     private const int max_devices   = 24;
     private const int max_routers   = 12;
     private const int max_switches  = 12;
-
-    public GameObject[] routers     = new GameObject[max_routers];
-    public GameObject[] switches    = new GameObject[max_switches];
 
     private Vector3[] spawn_locations   = new Vector3[max_devices];
     private bool[] active_locations     = new bool[max_devices];
@@ -299,29 +300,36 @@ public class MainMenu : MonoBehaviour
 
     void createRouter()
     {
-        bool found_location = true;
+        bool found_location = false;
 
-        /*for(int i = 0; i < active_locations.Length; i++)
+        for (int i = 0; i < 12; i++)
         {
-            //
-            if(!active_locations[i])
+            server = GameObject.Find("/Racks").GetComponent<RackObjectData>().routers[i];
+
+            if(!server.obj.activeSelf)
             {
                 found_location = true;
-                routers[i].transform.position = spawn_locations[i];
-                active_locations[i] = true;
+                server.obj.SetActive(true);
                 break;
             }
-        }*/
+        }
 
         if(!found_location)
         {
             router_text.text = "No Routers";
-            routerMessageTimer = 0;
         }
         else
         {
-            create_submenu.GetComponent<CreateSubMenu>().is_router = true;
-            create_submenu.GetComponent<CreateSubMenu>().id_no = 498;
+            /*
+                Call Victor's Function (for ID)
+            */
+            //server.id = ;
+
+            // highlight object
+            subMenuScript = GameObject.Find("/OVRPlayerController/OVRCameraRig/TrackingSpace/RightHandAnchor/Create SubMenu").GetComponent<CreateSubMenu>();
+            subMenuScript.created_server = server;
+            subMenuScript.default_color = server.obj.GetComponent<MeshRenderer>().material.color;
+
             gameObject.SetActive(false);
             subMenu.SetActive(true);
         }
@@ -329,29 +337,36 @@ public class MainMenu : MonoBehaviour
 
     void createSwitch()
     {
-        bool found_location = true;
+        bool found_location = false;
 
-        /*for(int i = 0; i < active_locations.Length; i++)
+        for (int i = 0; i < 12; i++)
         {
-            //
-            if(!active_locations[i])
+            server = GameObject.Find("/Racks").GetComponent<RackObjectData>().switches[i];
+
+            if (!server.obj.activeSelf)
             {
                 found_location = true;
-                routers[i].transform.position = spawn_locations[i];
-                active_locations[i] = true;
+                server.obj.SetActive(true);
                 break;
             }
-        }*/
+        }
 
         if (!found_location)
         {
-            router_text.text = "No Switches";
-            routerMessageTimer = 0;
+            switch_text.text = "No Switches";
         }
         else
         {
-            create_submenu.GetComponent<CreateSubMenu>().is_router = false;
-            create_submenu.GetComponent<CreateSubMenu>().id_no = 498;
+            /*
+                Call Victor's Function (for ID)
+            */
+            //server.id = ;
+
+            // highlight object
+            subMenuScript = GameObject.Find("/OVRPlayerController/OVRCameraRig/TrackingSpace/RightHandAnchor/Create SubMenu").GetComponent<CreateSubMenu>();
+            subMenuScript.created_server = server;
+            subMenuScript.default_color = server.obj.GetComponent<MeshRenderer>().material.color;
+
             gameObject.SetActive(false);
             subMenu.SetActive(true);
         }

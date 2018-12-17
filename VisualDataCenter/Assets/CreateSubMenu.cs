@@ -8,8 +8,9 @@ public class CreateSubMenu : MonoBehaviour
 
     public GameObject main;
 
-    public bool is_router;
-    public int id_no;
+    public Color default_color;
+
+    public RackObjectData.ObjectData created_server;
 
     private Vector3 menu_sleep = new Vector3(0, 0, 0);
     private Vector3 menu_awake = new Vector3(0.0005f, 0.0005f, 0.0005f);
@@ -79,16 +80,19 @@ public class CreateSubMenu : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Debug.Log(id_no.ToString());
-        Debug.Log(is_router);
-        if (is_router)
+        if (created_server.is_router)
             type_text.text = "Device Type: Router"; 
         else
             type_text.text = "Device Type: Switch";
 
-        id_text.text = "ID: " + id_no.ToString();
+        id_text.text = "ID: " + created_server.id.ToString();
 
-        if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Two)) {
+        // highlight object
+        created_server.obj.GetComponent<MeshRenderer>().material.color = Color.white;
+
+        if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Two))
+        {
+            created_server.obj.GetComponent<MeshRenderer>().material.color = default_color;
 
             type_text.text = "Device Type: ";
             id_text.text = "ID: ";
